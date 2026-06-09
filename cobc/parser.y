@@ -1176,6 +1176,15 @@ get_handler_type_from_statement (struct cb_statement *statement)
 	if (statement->statement == STMT_HTTP_POST) {
 		return HTTP_POST_HANDLER;
 	}
+	if (statement->statement == STMT_HTTP_PUT) {
+		return HTTP_PUT_HANDLER;
+	}
+	if (statement->statement == STMT_HTTP_PATCH) {
+		return HTTP_PATCH_HANDLER;
+	}
+	if (statement->statement == STMT_HTTP_DELETE) {
+		return HTTP_DELETE_HANDLER;
+	}
 #if 0 /* not merged yet */
 	if (statement->statement == STMT_DELETE_FILE) {
 		return DELETE_FILE_HANDLER;
@@ -2963,8 +2972,11 @@ set_record_size (cb_tree min, cb_tree max)
 %token HOT_TRACK		"HOT-TRACK"
 %token HSCROLL
 %token HSCROLL_POS		"HSCROLL-POS"
+%token HTTP_DELETE		"HTTP-DELETE"
 %token HTTP_GET		"HTTP-GET"
+%token HTTP_PATCH		"HTTP-PATCH"
 %token HTTP_POST		"HTTP-POST"
+%token HTTP_PUT		"HTTP-PUT"
 %token ICON
 %token ID
 %token IDENTIFIED
@@ -3572,8 +3584,11 @@ set_record_size (cb_tree min, cb_tree max)
 %nonassoc INITIATE
 %nonassoc INQUIRE
 %nonassoc INSPECT
+%nonassoc HTTP_DELETE
 %nonassoc HTTP_GET
+%nonassoc HTTP_PATCH
 %nonassoc HTTP_POST
+%nonassoc HTTP_PUT
 %nonassoc JSON
 %nonassoc MERGE
 %nonassoc MODIFY
@@ -11830,8 +11845,11 @@ statement:
 | write_statement
 | xml_generate_statement
 | xml_parse_statement
+| http_delete_statement
 | http_get_statement
+| http_patch_statement
 | http_post_statement
+| http_put_statement
 | %prec SHIFT_PREFER
   NEXT { check_non_area_a ($1); }
   SENTENCE
@@ -18192,7 +18210,7 @@ http_post_statement:
 	begin_statement (STMT_HTTP_POST, TERM_NONE);
   }
   identifier SENDING identifier
-  http_post_headers
+  http_headers_phrase
   GIVING identifier STATUS identifier
   _common_exception_phrases
   {
@@ -18204,7 +18222,64 @@ http_post_statement:
   }
 ;
 
-http_post_headers:
+http_put_statement:
+  HTTP_PUT
+  {
+	check_non_area_a ($1);
+	begin_statement (STMT_HTTP_PUT, TERM_NONE);
+  }
+  identifier SENDING identifier
+  http_headers_phrase
+  GIVING identifier STATUS identifier
+  _common_exception_phrases
+  {
+	cb_tree hdrs = $6;
+	cb_emit_http_put ($3, $5,
+			  hdrs ? CB_PAIR_X (hdrs) : NULL,
+			  hdrs ? CB_PAIR_Y (hdrs) : NULL,
+			  $8, $10);
+  }
+;
+
+http_patch_statement:
+  HTTP_PATCH
+  {
+	check_non_area_a ($1);
+	begin_statement (STMT_HTTP_PATCH, TERM_NONE);
+  }
+  identifier SENDING identifier
+  http_headers_phrase
+  GIVING identifier STATUS identifier
+  _common_exception_phrases
+  {
+	cb_tree hdrs = $6;
+	cb_emit_http_patch ($3, $5,
+			   hdrs ? CB_PAIR_X (hdrs) : NULL,
+			   hdrs ? CB_PAIR_Y (hdrs) : NULL,
+			   $8, $10);
+  }
+;
+
+http_delete_statement:
+  HTTP_DELETE
+  {
+	check_non_area_a ($1);
+	begin_statement (STMT_HTTP_DELETE, TERM_NONE);
+  }
+  identifier
+  http_headers_phrase
+  GIVING identifier STATUS identifier
+  _common_exception_phrases
+  {
+	cb_tree hdrs = $4;
+	cb_emit_http_delete ($3,
+			     hdrs ? CB_PAIR_X (hdrs) : NULL,
+			     hdrs ? CB_PAIR_Y (hdrs) : NULL,
+			     $6, $8);
+  }
+;
+
+http_headers_phrase:
   /* empty */
   {
 	$$ = NULL;

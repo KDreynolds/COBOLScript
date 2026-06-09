@@ -1513,6 +1513,9 @@ enum cb_handler_type {
 	JSON_HANDLER,
 	HTTP_HANDLER,
 	HTTP_POST_HANDLER,
+	HTTP_PUT_HANDLER,
+	HTTP_PATCH_HANDLER,
+	HTTP_DELETE_HANDLER,
 	MCS_HANDLER
 };
 
@@ -2607,6 +2610,12 @@ extern void		cb_emit_json_generate (cb_tree, cb_tree, cb_tree,
 extern void		cb_emit_http_get (cb_tree, cb_tree, cb_tree);
 extern void		cb_emit_http_post (cb_tree, cb_tree, cb_tree, cb_tree,
 					    cb_tree, cb_tree);
+extern void		cb_emit_http_put (cb_tree, cb_tree, cb_tree, cb_tree,
+					   cb_tree, cb_tree);
+extern void		cb_emit_http_patch (cb_tree, cb_tree, cb_tree, cb_tree,
+					     cb_tree, cb_tree);
+extern void		cb_emit_http_delete (cb_tree, cb_tree, cb_tree,
+					     cb_tree, cb_tree);
 
 #ifdef	COB_TREE_DEBUG
 extern cb_tree		cobc_tree_cast_check (const cb_tree, const char *,

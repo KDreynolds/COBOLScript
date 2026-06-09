@@ -8712,6 +8712,9 @@ output_ec_condition_for_handler (const enum cb_handler_type handler_type)
 
 	case HTTP_HANDLER:
 	case HTTP_POST_HANDLER:
+	case HTTP_PUT_HANDLER:
+	case HTTP_PATCH_HANDLER:
+	case HTTP_DELETE_HANDLER:
 		output_level_2_ex_condition (COB_EC_HTTP);
 		break;
 
