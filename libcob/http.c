@@ -21,6 +21,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 /* include internal and external libcob definitions, forcing exports */
 #define	COB_LIB_EXPIMP
@@ -29,6 +30,19 @@
 
 #if defined (WITH_CURL)
 #include <curl/curl.h>
+#endif
+
+#if defined (WITH_CJSON)
+#if defined (HAVE_CJSON_CJSON_H)
+#include <cjson/cJSON.h>
+#elif defined (HAVE_CJSON_H)
+#include <cJSON.h>
+#else
+#error CJSON without necessary header
+#endif
+#endif
+
+#if defined (WITH_CURL)
 
 #define COB_HTTP_METHOD_GET	0
 #define COB_HTTP_METHOD_POST	1
@@ -160,8 +174,193 @@ write_status_code (cob_field *status_code, long http_code)
 	}
 }
 
+#if defined (WITH_CJSON)
+
+static void
+build_json_from_tree (cob_ml_tree *tree, cJSON *parent)
+{
+	cob_ml_tree	*child;
+	char		name_buf[256];
+	const char	*name;
+	size_t		nlen;
+
+	for (child = tree->children; child; child = child->sibling) {
+		if (child->is_suppressed) {
+			continue;
+		}
+
+		name = NULL;
+		if (child->name && child->name->data && child->name->size > 0) {
+			nlen = child->name->size;
+			if (nlen > 255) {
+				nlen = 255;
+			}
+			memcpy (name_buf, child->name->data, nlen);
+			while (nlen > 0 && name_buf[nlen - 1] == ' ') {
+				nlen--;
+			}
+			name_buf[nlen] = '\0';
+			name = name_buf;
+		}
+
+		if (child->children) {
+			cJSON *sub = cJSON_CreateObject ();
+			if (!sub) {
+				continue;
+			}
+			build_json_from_tree (child, sub);
+			if (name) {
+				cJSON_AddItemToObject (parent, name, sub);
+			} else {
+				cJSON_Delete (sub);
+			}
+		} else if (child->content) {
+			if (!name) {
+				continue;
+			}
+			if (COB_FIELD_IS_NUMERIC (child->content)) {
+				int ival = cob_get_int (child->content);
+				cJSON_AddNumberToObject (parent, name,
+							 (double) ival);
+			} else {
+				const unsigned char *data;
+				size_t		size;
+				size = child->content->size;
+				data = child->content->data;
+				while (size > 0 && data[size - 1] == ' ') {
+					size--;
+				}
+				if (size > 0) {
+					char *str_val;
+					str_val = cob_malloc (size + 1);
+					memcpy (str_val, data, size);
+					str_val[size] = '\0';
+					cJSON_AddStringToObject (parent, name,
+								 str_val);
+					cob_free (str_val);
+				} else {
+					cJSON_AddStringToObject (parent, name,
+								 "");
+				}
+			}
+		}
+	}
+}
+
+static char *
+generate_json_from_mapping (cob_ml_tree *tree)
+{
+	cJSON	*root;
+	char	*json_str;
+
+	root = cJSON_CreateObject ();
+	if (!root) {
+		return NULL;
+	}
+
+	build_json_from_tree (tree, root);
+
+	json_str = cJSON_PrintUnformatted (root);
+	cJSON_Delete (root);
+	return json_str;
+}
+
+static void
+parse_json_into_tree (cob_ml_tree *tree, cJSON *json)
+{
+	cob_ml_tree	*child;
+	char		name_buf[256];
+	const char	*name;
+	size_t		nlen;
+	cJSON		*item;
+
+	for (child = tree->children; child; child = child->sibling) {
+		if (child->is_suppressed) {
+			continue;
+		}
+
+		name = NULL;
+		if (child->name && child->name->data && child->name->size > 0) {
+			nlen = child->name->size;
+			if (nlen > 255) {
+				nlen = 255;
+			}
+			memcpy (name_buf, child->name->data, nlen);
+			while (nlen > 0 && name_buf[nlen - 1] == ' ') {
+				nlen--;
+			}
+			name_buf[nlen] = '\0';
+			name = name_buf;
+		}
+
+		if (!name) {
+			continue;
+		}
+
+		item = cJSON_GetObjectItem (json, name);
+		if (!item) {
+			continue;
+		}
+
+		if (child->children) {
+			if (cJSON_IsObject (item)) {
+				parse_json_into_tree (child, item);
+			}
+		} else if (child->content) {
+			cob_field	tmp_field;
+			cob_field_attr	tmp_attr;
+			const char	*str_val;
+			char		num_buf[64];
+			size_t		slen;
+
+			memset (&tmp_attr, 0, sizeof (tmp_attr));
+			if (cJSON_IsString (item)) {
+				str_val = cJSON_GetStringValue (item);
+				slen = strlen (str_val);
+				tmp_attr.type = COB_TYPE_ALPHANUMERIC;
+				tmp_field.size = slen;
+				tmp_field.data = (unsigned char *) str_val;
+				tmp_field.attr = &tmp_attr;
+				cob_move (&tmp_field, child->content);
+			} else if (cJSON_IsNumber (item)) {
+				int ival = (int) cJSON_GetNumberValue (item);
+				tmp_field.size = sizeof (ival);
+				tmp_field.data = (unsigned char *) &ival;
+				tmp_attr.type = COB_TYPE_NUMERIC_BINARY;
+				tmp_attr.digits = 10;
+				tmp_attr.scale = 0;
+				tmp_attr.flags = 0;
+				tmp_attr.pic = NULL;
+				tmp_field.attr = &tmp_attr;
+				cob_move (&tmp_field, child->content);
+			}
+		}
+	}
+}
+
+static void
+parse_json_from_mapping (cob_ml_tree *tree, const char *json_str)
+{
+	cJSON *root;
+
+	root = cJSON_Parse (json_str);
+	if (!root) {
+		cob_set_exception (COB_EC_HTTP_IMP);
+		return;
+	}
+
+	if (cJSON_IsObject (root)) {
+		parse_json_into_tree (tree, root);
+	}
+
+	cJSON_Delete (root);
+}
+
+#endif /* WITH_CJSON */
+
 static void
 cob_http_perform (cob_field *url, cob_field *request_body,
+		  cob_ml_tree *mapping_tree,
 		  struct curl_slist *headers,
 		  cob_field *response_body, cob_field *status_code,
 		  int method)
@@ -202,10 +401,20 @@ cob_http_perform (cob_field *url, cob_field *request_body,
 				body_copy[--body_len] = '\0';
 			}
 		}
+#if defined (WITH_CJSON)
+	} else if (mapping_tree
+		   && (method == COB_HTTP_METHOD_POST
+		       || method == COB_HTTP_METHOD_PUT
+		       || method == COB_HTTP_METHOD_PATCH)) {
+		body_copy = generate_json_from_mapping (mapping_tree);
+		if (body_copy) {
+			body_len = strlen (body_copy);
+		}
+#endif
 	}
 
 	if (response_body && response_body->data && response_body->size > 0) {
-		chunk.buf = response_body->data;
+		chunk.buf = (char *) response_body->data;
 		chunk.capacity = response_body->size;
 		memset (chunk.buf, ' ', chunk.capacity);
 	} else {
@@ -277,6 +486,28 @@ cob_http_perform (cob_field *url, cob_field *request_body,
 	free (body_copy);
 
 	write_status_code (status_code, http_code);
+
+#if defined (WITH_CJSON)
+	if (mapping_tree
+	    && method != COB_HTTP_METHOD_POST
+	    && method != COB_HTTP_METHOD_PUT
+	    && method != COB_HTTP_METHOD_PATCH
+	    && response_body && response_body->data
+	    && response_body->size > 0) {
+		const char *resp_data = (const char *) response_body->data;
+		size_t resp_len = response_body->size;
+		while (resp_len > 0 && resp_data[resp_len - 1] == ' ') {
+			resp_len--;
+		}
+		if (resp_len > 0) {
+			char *json_str = cob_malloc (resp_len + 1);
+			memcpy (json_str, resp_data, resp_len);
+			json_str[resp_len] = '\0';
+			parse_json_from_mapping (mapping_tree, json_str);
+			cob_free (json_str);
+		}
+	}
+#endif
 }
 
 #endif /* WITH_CURL */
@@ -285,10 +516,27 @@ void
 cob_http_get (cob_field *url, cob_field *response_body, cob_field *status_code)
 {
 #if defined (WITH_CURL)
-	cob_http_perform (url, NULL, NULL, response_body, status_code,
+	cob_http_perform (url, NULL, NULL, NULL, response_body, status_code,
 			  COB_HTTP_METHOD_GET);
 #else
 	COB_UNUSED (url);
+	COB_UNUSED (response_body);
+	COB_UNUSED (status_code);
+	cob_set_exception (COB_EC_HTTP_IMP);
+#endif
+}
+
+void
+cob_http_get_mapping (cob_field *url, cob_ml_tree *mapping_tree,
+		      cob_field *response_body, cob_field *status_code)
+{
+#if defined (WITH_CURL)
+	cob_http_perform (url, NULL, mapping_tree, NULL,
+			  response_body, status_code,
+			  COB_HTTP_METHOD_GET);
+#else
+	COB_UNUSED (url);
+	COB_UNUSED (mapping_tree);
 	COB_UNUSED (response_body);
 	COB_UNUSED (status_code);
 	cob_set_exception (COB_EC_HTTP_IMP);
@@ -304,7 +552,7 @@ cob_http_post (cob_field *url, cob_field *request_body,
 	struct curl_slist	*headers = NULL;
 
 	headers = build_headers (header_count, header_entries);
-	cob_http_perform (url, request_body, headers,
+	cob_http_perform (url, request_body, NULL, headers,
 			  response_body, status_code,
 			  COB_HTTP_METHOD_POST);
 	if (headers) {
@@ -322,6 +570,32 @@ cob_http_post (cob_field *url, cob_field *request_body,
 }
 
 void
+cob_http_post_mapping (cob_field *url, cob_ml_tree *mapping_tree,
+			cob_field *header_count, cob_field *header_entries,
+			cob_field *response_body, cob_field *status_code)
+{
+#if defined (WITH_CURL)
+	struct curl_slist	*headers = NULL;
+
+	headers = build_headers (header_count, header_entries);
+	cob_http_perform (url, NULL, mapping_tree, headers,
+			  response_body, status_code,
+			  COB_HTTP_METHOD_POST);
+	if (headers) {
+		curl_slist_free_all (headers);
+	}
+#else
+	COB_UNUSED (url);
+	COB_UNUSED (mapping_tree);
+	COB_UNUSED (header_count);
+	COB_UNUSED (header_entries);
+	COB_UNUSED (response_body);
+	COB_UNUSED (status_code);
+	cob_set_exception (COB_EC_HTTP_IMP);
+#endif
+}
+
+void
 cob_http_put (cob_field *url, cob_field *request_body,
 	       cob_field *header_count, cob_field *header_entries,
 	       cob_field *response_body, cob_field *status_code)
@@ -330,7 +604,7 @@ cob_http_put (cob_field *url, cob_field *request_body,
 	struct curl_slist	*headers = NULL;
 
 	headers = build_headers (header_count, header_entries);
-	cob_http_perform (url, request_body, headers,
+	cob_http_perform (url, request_body, NULL, headers,
 			  response_body, status_code,
 			  COB_HTTP_METHOD_PUT);
 	if (headers) {
@@ -348,6 +622,32 @@ cob_http_put (cob_field *url, cob_field *request_body,
 }
 
 void
+cob_http_put_mapping (cob_field *url, cob_ml_tree *mapping_tree,
+		       cob_field *header_count, cob_field *header_entries,
+		       cob_field *response_body, cob_field *status_code)
+{
+#if defined (WITH_CURL)
+	struct curl_slist	*headers = NULL;
+
+	headers = build_headers (header_count, header_entries);
+	cob_http_perform (url, NULL, mapping_tree, headers,
+			  response_body, status_code,
+			  COB_HTTP_METHOD_PUT);
+	if (headers) {
+		curl_slist_free_all (headers);
+	}
+#else
+	COB_UNUSED (url);
+	COB_UNUSED (mapping_tree);
+	COB_UNUSED (header_count);
+	COB_UNUSED (header_entries);
+	COB_UNUSED (response_body);
+	COB_UNUSED (status_code);
+	cob_set_exception (COB_EC_HTTP_IMP);
+#endif
+}
+
+void
 cob_http_patch (cob_field *url, cob_field *request_body,
 		 cob_field *header_count, cob_field *header_entries,
 		 cob_field *response_body, cob_field *status_code)
@@ -356,7 +656,7 @@ cob_http_patch (cob_field *url, cob_field *request_body,
 	struct curl_slist	*headers = NULL;
 
 	headers = build_headers (header_count, header_entries);
-	cob_http_perform (url, request_body, headers,
+	cob_http_perform (url, request_body, NULL, headers,
 			  response_body, status_code,
 			  COB_HTTP_METHOD_PATCH);
 	if (headers) {
@@ -374,6 +674,32 @@ cob_http_patch (cob_field *url, cob_field *request_body,
 }
 
 void
+cob_http_patch_mapping (cob_field *url, cob_ml_tree *mapping_tree,
+			 cob_field *header_count, cob_field *header_entries,
+			 cob_field *response_body, cob_field *status_code)
+{
+#if defined (WITH_CURL)
+	struct curl_slist	*headers = NULL;
+
+	headers = build_headers (header_count, header_entries);
+	cob_http_perform (url, NULL, mapping_tree, headers,
+			  response_body, status_code,
+			  COB_HTTP_METHOD_PATCH);
+	if (headers) {
+		curl_slist_free_all (headers);
+	}
+#else
+	COB_UNUSED (url);
+	COB_UNUSED (mapping_tree);
+	COB_UNUSED (header_count);
+	COB_UNUSED (header_entries);
+	COB_UNUSED (response_body);
+	COB_UNUSED (status_code);
+	cob_set_exception (COB_EC_HTTP_IMP);
+#endif
+}
+
+void
 cob_http_delete (cob_field *url,
 		  cob_field *header_count, cob_field *header_entries,
 		  cob_field *response_body, cob_field *status_code)
@@ -382,7 +708,7 @@ cob_http_delete (cob_field *url,
 	struct curl_slist	*headers = NULL;
 
 	headers = build_headers (header_count, header_entries);
-	cob_http_perform (url, NULL, headers,
+	cob_http_perform (url, NULL, NULL, headers,
 			  response_body, status_code,
 			  COB_HTTP_METHOD_DELETE);
 	if (headers) {
@@ -390,6 +716,32 @@ cob_http_delete (cob_field *url,
 	}
 #else
 	COB_UNUSED (url);
+	COB_UNUSED (header_count);
+	COB_UNUSED (header_entries);
+	COB_UNUSED (response_body);
+	COB_UNUSED (status_code);
+	cob_set_exception (COB_EC_HTTP_IMP);
+#endif
+}
+
+void
+cob_http_delete_mapping (cob_field *url, cob_ml_tree *mapping_tree,
+			  cob_field *header_count, cob_field *header_entries,
+			  cob_field *response_body, cob_field *status_code)
+{
+#if defined (WITH_CURL)
+	struct curl_slist	*headers = NULL;
+
+	headers = build_headers (header_count, header_entries);
+	cob_http_perform (url, NULL, mapping_tree, headers,
+			  response_body, status_code,
+			  COB_HTTP_METHOD_DELETE);
+	if (headers) {
+		curl_slist_free_all (headers);
+	}
+#else
+	COB_UNUSED (url);
+	COB_UNUSED (mapping_tree);
 	COB_UNUSED (header_count);
 	COB_UNUSED (header_entries);
 	COB_UNUSED (response_body);

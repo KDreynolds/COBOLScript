@@ -3070,6 +3070,7 @@ set_record_size (cb_tree min, cb_tree max)
 %token LOW_VALUE		"LOW-VALUE"
 %token MAGNETIC_TAPE		"MAGNETIC-TAPE"
 %token MANUAL
+%token MAPPING
 %token MASS_UPDATE		"MASS-UPDATE"
 %token MASTER_INDEX		"MASTER-INDEX"
 %token MAX_LINES		"MAX-LINES"
@@ -18209,16 +18210,24 @@ http_post_statement:
 	check_non_area_a ($1);
 	begin_statement (STMT_HTTP_POST, TERM_NONE);
   }
-  identifier SENDING identifier
+  identifier http_body_phrase
   http_headers_phrase
   GIVING identifier STATUS identifier
   _common_exception_phrases
   {
-	cb_tree hdrs = $6;
-	cb_emit_http_post ($3, $5,
-			   hdrs ? CB_PAIR_X (hdrs) : NULL,
-			   hdrs ? CB_PAIR_Y (hdrs) : NULL,
-			   $8, $10);
+	cb_tree body = $4;
+	cb_tree hdrs = $5;
+	if (CB_PAIR_X (body) == cb_int0) {
+		cb_emit_http_post ($3, CB_PAIR_Y (body),
+				   hdrs ? CB_PAIR_X (hdrs) : NULL,
+				   hdrs ? CB_PAIR_Y (hdrs) : NULL,
+				   $7, $9);
+	} else {
+		cb_emit_http_post_mapping ($3, CB_PAIR_Y (body),
+					   hdrs ? CB_PAIR_X (hdrs) : NULL,
+					   hdrs ? CB_PAIR_Y (hdrs) : NULL,
+					   $7, $9);
+	}
   }
 ;
 
@@ -18228,16 +18237,24 @@ http_put_statement:
 	check_non_area_a ($1);
 	begin_statement (STMT_HTTP_PUT, TERM_NONE);
   }
-  identifier SENDING identifier
+  identifier http_body_phrase
   http_headers_phrase
   GIVING identifier STATUS identifier
   _common_exception_phrases
   {
-	cb_tree hdrs = $6;
-	cb_emit_http_put ($3, $5,
-			  hdrs ? CB_PAIR_X (hdrs) : NULL,
-			  hdrs ? CB_PAIR_Y (hdrs) : NULL,
-			  $8, $10);
+	cb_tree body = $4;
+	cb_tree hdrs = $5;
+	if (CB_PAIR_X (body) == cb_int0) {
+		cb_emit_http_put ($3, CB_PAIR_Y (body),
+				  hdrs ? CB_PAIR_X (hdrs) : NULL,
+				  hdrs ? CB_PAIR_Y (hdrs) : NULL,
+				  $7, $9);
+	} else {
+		cb_emit_http_put_mapping ($3, CB_PAIR_Y (body),
+					  hdrs ? CB_PAIR_X (hdrs) : NULL,
+					  hdrs ? CB_PAIR_Y (hdrs) : NULL,
+					  $7, $9);
+	}
   }
 ;
 
@@ -18247,16 +18264,24 @@ http_patch_statement:
 	check_non_area_a ($1);
 	begin_statement (STMT_HTTP_PATCH, TERM_NONE);
   }
-  identifier SENDING identifier
+  identifier http_body_phrase
   http_headers_phrase
   GIVING identifier STATUS identifier
   _common_exception_phrases
   {
-	cb_tree hdrs = $6;
-	cb_emit_http_patch ($3, $5,
-			   hdrs ? CB_PAIR_X (hdrs) : NULL,
-			   hdrs ? CB_PAIR_Y (hdrs) : NULL,
-			   $8, $10);
+	cb_tree body = $4;
+	cb_tree hdrs = $5;
+	if (CB_PAIR_X (body) == cb_int0) {
+		cb_emit_http_patch ($3, CB_PAIR_Y (body),
+				    hdrs ? CB_PAIR_X (hdrs) : NULL,
+				    hdrs ? CB_PAIR_Y (hdrs) : NULL,
+				    $7, $9);
+	} else {
+		cb_emit_http_patch_mapping ($3, CB_PAIR_Y (body),
+					    hdrs ? CB_PAIR_X (hdrs) : NULL,
+					    hdrs ? CB_PAIR_Y (hdrs) : NULL,
+					    $7, $9);
+	}
   }
 ;
 
@@ -18266,16 +18291,24 @@ http_delete_statement:
 	check_non_area_a ($1);
 	begin_statement (STMT_HTTP_DELETE, TERM_NONE);
   }
-  identifier
+  identifier http_mapping_phrase
   http_headers_phrase
   GIVING identifier STATUS identifier
   _common_exception_phrases
   {
-	cb_tree hdrs = $4;
-	cb_emit_http_delete ($3,
-			     hdrs ? CB_PAIR_X (hdrs) : NULL,
-			     hdrs ? CB_PAIR_Y (hdrs) : NULL,
-			     $6, $8);
+	cb_tree mapping = $4;
+	cb_tree hdrs = $5;
+	if (mapping) {
+		cb_emit_http_delete_mapping ($3, mapping,
+					     hdrs ? CB_PAIR_X (hdrs) : NULL,
+					     hdrs ? CB_PAIR_Y (hdrs) : NULL,
+					     $7, $9);
+	} else {
+		cb_emit_http_delete ($3,
+				     hdrs ? CB_PAIR_X (hdrs) : NULL,
+				     hdrs ? CB_PAIR_Y (hdrs) : NULL,
+				     $7, $9);
+	}
   }
 ;
 
@@ -18290,6 +18323,28 @@ http_headers_phrase:
   }
 ;
 
+http_mapping_phrase:
+  /* empty */
+  {
+	$$ = NULL;
+  }
+| MAPPING identifier
+  {
+	$$ = $2;
+  }
+;
+
+http_body_phrase:
+  SENDING identifier
+  {
+	$$ = CB_BUILD_PAIR (cb_int0, $2);
+  }
+| MAPPING identifier
+  {
+	$$ = CB_BUILD_PAIR (cb_int1, $2);
+  }
+;
+
 /* HTTP-GET */
 
 http_get_statement:
@@ -18298,10 +18353,15 @@ http_get_statement:
 	check_non_area_a ($1);
 	begin_statement (STMT_HTTP_GET, TERM_NONE);
   }
-  identifier GIVING identifier STATUS identifier
+  identifier http_mapping_phrase GIVING identifier STATUS identifier
   _common_exception_phrases
   {
-	cb_emit_http_get ($3, $5, $7);
+	cb_tree mapping = $4;
+	if (mapping) {
+		cb_emit_http_get_mapping ($3, mapping, $6, $8);
+	} else {
+		cb_emit_http_get ($3, $6, $8);
+	}
   }
 ;
 

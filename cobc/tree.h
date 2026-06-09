@@ -2608,14 +2608,24 @@ extern cb_tree		cb_build_xml_parse (cb_tree, cb_tree,
 extern void		cb_emit_json_generate (cb_tree, cb_tree, cb_tree,
 					       cb_tree, cb_tree);
 extern void		cb_emit_http_get (cb_tree, cb_tree, cb_tree);
+extern void		cb_emit_http_get_mapping (cb_tree, cb_tree, cb_tree,
+						  cb_tree);
 extern void		cb_emit_http_post (cb_tree, cb_tree, cb_tree, cb_tree,
 					    cb_tree, cb_tree);
+extern void		cb_emit_http_post_mapping (cb_tree, cb_tree, cb_tree,
+						    cb_tree, cb_tree, cb_tree);
 extern void		cb_emit_http_put (cb_tree, cb_tree, cb_tree, cb_tree,
 					   cb_tree, cb_tree);
+extern void		cb_emit_http_put_mapping (cb_tree, cb_tree, cb_tree,
+						   cb_tree, cb_tree, cb_tree);
 extern void		cb_emit_http_patch (cb_tree, cb_tree, cb_tree, cb_tree,
 					     cb_tree, cb_tree);
+extern void		cb_emit_http_patch_mapping (cb_tree, cb_tree, cb_tree,
+						     cb_tree, cb_tree, cb_tree);
 extern void		cb_emit_http_delete (cb_tree, cb_tree, cb_tree,
 					     cb_tree, cb_tree);
+extern void		cb_emit_http_delete_mapping (cb_tree, cb_tree, cb_tree,
+						     cb_tree, cb_tree, cb_tree);
 
 #ifdef	COB_TREE_DEBUG
 extern cb_tree		cobc_tree_cast_check (const cb_tree, const char *,

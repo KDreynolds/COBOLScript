@@ -1846,6 +1846,9 @@ static struct cobc_reserved default_reserved_words[] = {
 				0, 0
 	/* FIXME: 2014 Context-sensitive to LOCK MODE clause */
   },
+  { "MAPPING",			0, 1, MAPPING,			/* GC extension */
+				0, 0
+  },
   { "MASS-UPDATE",		0, 1, MASS_UPDATE,		/* ACU extension */
 				0, CB_CS_GRAPHICAL_CONTROL | CB_CS_INQUIRE_MODIFY | CB_CS_SELECT | CB_CS_OPEN
   },

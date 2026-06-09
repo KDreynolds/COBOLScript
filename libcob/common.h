@@ -2729,14 +2729,28 @@ COB_EXPIMP int	cob_xml_parse	(cob_field *, cob_field *,
 					 cob_field *, const int, void **);
 
 COB_EXPIMP void	cob_http_get	(cob_field *, cob_field *, cob_field *);
+COB_EXPIMP void	cob_http_get_mapping	(cob_field *, cob_ml_tree *,
+					 cob_field *, cob_field *);
 COB_EXPIMP void	cob_http_post	(cob_field *, cob_field *, cob_field *,
 				 cob_field *, cob_field *, cob_field *);
+COB_EXPIMP void	cob_http_post_mapping	(cob_field *, cob_ml_tree *,
+					 cob_field *, cob_field *,
+					 cob_field *, cob_field *);
 COB_EXPIMP void	cob_http_put	(cob_field *, cob_field *, cob_field *,
 				 cob_field *, cob_field *, cob_field *);
+COB_EXPIMP void	cob_http_put_mapping	(cob_field *, cob_ml_tree *,
+					 cob_field *, cob_field *,
+					 cob_field *, cob_field *);
 COB_EXPIMP void	cob_http_patch	(cob_field *, cob_field *, cob_field *,
 				 cob_field *, cob_field *, cob_field *);
+COB_EXPIMP void	cob_http_patch_mapping	(cob_field *, cob_ml_tree *,
+					 cob_field *, cob_field *,
+					 cob_field *, cob_field *);
 COB_EXPIMP void	cob_http_delete	(cob_field *, cob_field *, cob_field *,
 				 cob_field *, cob_field *);
+COB_EXPIMP void	cob_http_delete_mapping (cob_field *, cob_ml_tree *,
+					 cob_field *, cob_field *,
+					 cob_field *, cob_field *);
 
 
 /****************************/

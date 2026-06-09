@@ -131,6 +131,7 @@ static int			warn_json_done = 0;
 #endif
 #if	!defined (WITH_CURL)
 static int			warn_curl_done = 0;
+static int			warn_mapping_done = 0;
 #endif
 #ifndef WITH_EXTENDED_SCREENIO
 static int			warn_screen_done = 0;
@@ -15666,6 +15667,71 @@ cb_emit_json_generate (cb_tree out, cb_tree from, cb_tree count,
 				     count, cb_int (decimal_point)));
 }
 
+static void
+add_mapping_names (struct cb_field *parent, cb_tree *name_list)
+{
+	struct cb_field *child;
+
+	for (child = parent->children; child; child = child->sister) {
+		if (cb_field_is_ignored_in_ml_gen (child)) {
+			continue;
+		}
+
+		const char	*child_name = child->name;
+		size_t		child_name_len = strlen (child_name);
+		const char	*parent_name = parent->name;
+		size_t		parent_name_len = strlen (parent_name);
+
+		if (parent_name_len > 0
+		    && strncasecmp (child_name, parent_name,
+				    parent_name_len) == 0
+		    && child_name[parent_name_len] == '-') {
+			child_name += parent_name_len + 1;
+			child_name_len -= parent_name_len + 1;
+		}
+
+		char		key[COB_SMALL_BUFF];
+		size_t		j;
+		for (j = 0; j < child_name_len && j < sizeof (key) - 1; j++) {
+			key[j] = tolower ((unsigned char) child_name[j]);
+		}
+		key[j] = '\0';
+
+		cb_tree name_lit = cb_build_alphanumeric_literal (key, j);
+		*name_list = cb_pair_add (*name_list, CB_TREE (child),
+					  name_lit);
+
+		if (child->children) {
+			add_mapping_names (child, name_list);
+		}
+	}
+}
+
+static struct cb_ml_generate_tree *
+cb_build_mapping_tree (cb_tree group_ref)
+{
+	struct cb_ml_generate_tree	*tree;
+	cb_tree				name_list = NULL;
+	struct cb_field			*field;
+
+	field = CB_FIELD (cb_ref (group_ref));
+
+	add_mapping_names (field, &name_list);
+
+	tree = CB_ML_TREE (cb_build_ml_tree (field, 0, 0, name_list,
+					     NULL, NULL));
+
+	/* Anonymous root: skip group name as JSON key */
+	tree->name = NULL;
+
+	tree->sibling = current_program->ml_trees;
+	current_program->ml_trees = tree;
+
+	cb_emit (cb_build_ml_suppress_checks (tree));
+
+	return tree;
+}
+
 void
 cb_emit_http_get (cb_tree url, cb_tree response_body, cb_tree status_code)
 {
@@ -15744,6 +15810,139 @@ cb_emit_http_delete (cb_tree url,
 	}
 #endif
 	cb_emit (CB_BUILD_FUNCALL_5 ("cob_http_delete", url,
+				     header_count, header_entries,
+				     response_body, status_code));
+}
+
+void
+cb_emit_http_get_mapping (cb_tree url, cb_tree mapping_group,
+			  cb_tree response_body, cb_tree status_code)
+{
+	struct cb_ml_generate_tree	*tree;
+#if !defined (WITH_CJSON) && !defined (WITH_JSON_C)
+	if (!warn_mapping_done) {
+		warn_mapping_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support MAPPING"));
+	}
+#endif
+#if !defined (WITH_CURL)
+	if (!warn_curl_done) {
+		warn_curl_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support %s"), "HTTP");
+	}
+#endif
+	tree = cb_build_mapping_tree (mapping_group);
+	cb_emit (CB_BUILD_FUNCALL_4 ("cob_http_get_mapping", url,
+				     CB_TREE (tree), response_body,
+				     status_code));
+}
+
+void
+cb_emit_http_post_mapping (cb_tree url, cb_tree mapping_group,
+			   cb_tree header_count, cb_tree header_entries,
+			   cb_tree response_body, cb_tree status_code)
+{
+	struct cb_ml_generate_tree	*tree;
+#if !defined (WITH_CJSON) && !defined (WITH_JSON_C)
+	if (!warn_mapping_done) {
+		warn_mapping_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support MAPPING"));
+	}
+#endif
+#if !defined (WITH_CURL)
+	if (!warn_curl_done) {
+		warn_curl_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support %s"), "HTTP");
+	}
+#endif
+	tree = cb_build_mapping_tree (mapping_group);
+	cb_emit (CB_BUILD_FUNCALL_6 ("cob_http_post_mapping", url,
+				     CB_TREE (tree),
+				     header_count, header_entries,
+				     response_body, status_code));
+}
+
+void
+cb_emit_http_put_mapping (cb_tree url, cb_tree mapping_group,
+			  cb_tree header_count, cb_tree header_entries,
+			  cb_tree response_body, cb_tree status_code)
+{
+	struct cb_ml_generate_tree	*tree;
+#if !defined (WITH_CJSON) && !defined (WITH_JSON_C)
+	if (!warn_mapping_done) {
+		warn_mapping_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support MAPPING"));
+	}
+#endif
+#if !defined (WITH_CURL)
+	if (!warn_curl_done) {
+		warn_curl_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support %s"), "HTTP");
+	}
+#endif
+	tree = cb_build_mapping_tree (mapping_group);
+	cb_emit (CB_BUILD_FUNCALL_6 ("cob_http_put_mapping", url,
+				     CB_TREE (tree),
+				     header_count, header_entries,
+				     response_body, status_code));
+}
+
+void
+cb_emit_http_patch_mapping (cb_tree url, cb_tree mapping_group,
+			    cb_tree header_count, cb_tree header_entries,
+			    cb_tree response_body, cb_tree status_code)
+{
+	struct cb_ml_generate_tree	*tree;
+#if !defined (WITH_CJSON) && !defined (WITH_JSON_C)
+	if (!warn_mapping_done) {
+		warn_mapping_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support MAPPING"));
+	}
+#endif
+#if !defined (WITH_CURL)
+	if (!warn_curl_done) {
+		warn_curl_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support %s"), "HTTP");
+	}
+#endif
+	tree = cb_build_mapping_tree (mapping_group);
+	cb_emit (CB_BUILD_FUNCALL_6 ("cob_http_patch_mapping", url,
+				     CB_TREE (tree),
+				     header_count, header_entries,
+				     response_body, status_code));
+}
+
+void
+cb_emit_http_delete_mapping (cb_tree url, cb_tree mapping_group,
+			     cb_tree header_count, cb_tree header_entries,
+			     cb_tree response_body, cb_tree status_code)
+{
+	struct cb_ml_generate_tree	*tree;
+#if !defined (WITH_CJSON) && !defined (WITH_JSON_C)
+	if (!warn_mapping_done) {
+		warn_mapping_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support MAPPING"));
+	}
+#endif
+#if !defined (WITH_CURL)
+	if (!warn_curl_done) {
+		warn_curl_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support %s"), "HTTP");
+	}
+#endif
+	tree = cb_build_mapping_tree (mapping_group);
+	cb_emit (CB_BUILD_FUNCALL_6 ("cob_http_delete_mapping", url,
+				     CB_TREE (tree),
 				     header_count, header_entries,
 				     response_body, status_code));
 }
