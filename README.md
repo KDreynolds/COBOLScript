@@ -174,8 +174,27 @@ Development
 If you wish to hack the GnuCOBOL source or build from version control,
 see HACKING.
 
-Further information about the project, including the source code repository,
-history, and frequently asked questions, may be found at 
+Extensions
+==========
+
+Beyond the COBOL standards, GnuCOBOL provides several language
+extensions, some requiring optional libraries detected at build time:
+
+*  `XML PARSE` — parse XML documents (requires libxml2)
+*  `JSON GENERATE` / `JSON PARSE` — generate and parse JSON data
+   (requires cJSON or json-c)
+*  `HTTP-GET`, `HTTP-POST`, `HTTP-PUT`, `HTTP-PATCH`, `HTTP-DELETE` —
+   native HTTP verbs with optional `MAPPING` phrase for automatic
+   JSON serialization/deserialization of DATA DIVISION groups
+   (requires libcurl and cJSON for MAPPING)
+
+The MAPPING phrase maps COBOL group fields to JSON keys by stripping
+the parent group name prefix and lowercasing the remainder.
+On POST/PUT/PATCH, the group is serialized to a JSON request body;
+on GET/DELETE, the JSON response is deserialized back into the group.
+
+Further information about the project, including the source code
+repository, history, and frequently asked questions, may be found at
 
 *  https://www.gnu.org/software/gnucobol/
 *  https://sourceforge.net/projects/gnucobol
