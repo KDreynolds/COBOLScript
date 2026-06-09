@@ -1364,6 +1364,31 @@ case "$USE_JSON" in
 esac
 
 
+# Checks for libcurl (HTTP support).
+AC_MSG_NOTICE([Checks for HTTP (libcurl)])
+
+AC_ARG_WITH([curl],
+  [AS_HELP_STRING([--with-curl],
+    [(GnuCOBOL) Use libcurl for HTTP-GET support (default: check)])],
+  [],
+  [with_curl=check])
+
+AS_IF([test "$with_curl" != no], [
+	PKG_CHECK_MODULES([CURL], [libcurl], [
+		AC_DEFINE([WITH_CURL], [1], [Define if libcurl is available])
+		LIBCOB_CPPFLAGS="$LIBCOB_CPPFLAGS $CURL_CFLAGS"
+		LIBCOB_LIBS="$LIBCOB_LIBS $CURL_LIBS"
+		with_curl=yes
+	], [
+		if test "$with_curl" = yes; then
+			AC_MSG_ERROR([libcurl is required for --with-curl])
+		fi
+		with_curl=not_found
+		AC_MSG_WARN([libcurl not found, HTTP-GET will be unavailable])
+	])
+])
+
+
 AC_ARG_WITH([dl],
   [AS_HELP_STRING([--with-dl],
     [(GnuCOBOL) Use system dynamic loader (default)])],

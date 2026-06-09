@@ -8710,6 +8710,10 @@ output_ec_condition_for_handler (const enum cb_handler_type handler_type)
 		output_level_2_ex_condition (COB_EC_JSON);
 		break;
 
+	case HTTP_HANDLER:
+		output_level_2_ex_condition (COB_EC_HTTP);
+		break;
+
 	/* LCOV_EXCL_START */
 	default:
 		cobc_err_msg (_("unexpected handler type: %d"), (int) handler_type);

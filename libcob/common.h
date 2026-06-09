@@ -2728,6 +2728,8 @@ COB_EXPIMP void cob_json_generate_new	(cob_field *, cob_ml_tree *,
 COB_EXPIMP int	cob_xml_parse	(cob_field *, cob_field *,
 					 cob_field *, const int, void **);
 
+COB_EXPIMP void	cob_http_get	(cob_field *, cob_field *, cob_field *);
+
 
 /****************************/
 /* Functions in intrinsic.c */

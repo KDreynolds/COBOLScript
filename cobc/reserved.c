@@ -1532,6 +1532,9 @@ static struct cobc_reserved default_reserved_words[] = {
   { "HSCROLL-POS",		0, 1, HSCROLL_POS,		/* ACU extension */
 				0, CB_CS_GRAPHICAL_CONTROL | CB_CS_INQUIRE_MODIFY
   },
+  { "HTTP-GET",			1, 0, HTTP_GET,		/* GC extension */
+				0, 0
+  },
   { "I-O",			0, 0, I_O,			/* 2002 */
 				0, 0
   },

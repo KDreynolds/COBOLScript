@@ -22,7 +22,7 @@
 lib_LTLIBRARIES = libcob.la
 libcob_la_SOURCES = common.c move.c numeric.c strings.c \
 	fileio.c call.c intrinsic.c termio.c screenio.c reportio.c cobgetopt.c \
-	mlio.c coblocal.h cconv.c system.def profiling.c
+	mlio.c http.c coblocal.h cconv.c system.def profiling.c
 
 EXTRA_DIST = xmlevent.def
 
@@ -36,10 +36,10 @@ endif
 #COBCRUN = cobcrun$(EXEEXT)
 
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir)/lib -I$(top_srcdir)/lib \
-	$(LIBCOB_CPPFLAGS) -DLOCALEDIR=\"$(localedir)\"
+	$(LIBCOB_CPPFLAGS) $(CURL_CFLAGS) -DLOCALEDIR=\"$(localedir)\"
 AM_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 # note: currently misses libsupport...
-libcob_la_LIBADD = $(LIBCOB_LIBS) $(CODE_COVERAGE_LIBS)
+libcob_la_LIBADD = $(LIBCOB_LIBS) $(CURL_LIBS) $(CODE_COVERAGE_LIBS)
 libcob_la_LDFLAGS = $(COB_FIX_LIBTOOL) -version-info 6:0:2 -no-undefined
 AM_LDFLAGS = $(COB_FIX_LIB)
 

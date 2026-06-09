@@ -731,6 +731,15 @@ COB_EXCEPTION  (1710, COB_EC_JSON_IMP,
 		"EC-JSON-IMP", 1)
 
 
+/* HTTP exception (GnuCOBOL extension) */
+COB_EXCEPTION  (1B00, COB_EC_HTTP,
+		"EC-HTTP", 0)
+
+/* HTTP */
+COB_EXCEPTION  (1B01, COB_EC_HTTP_IMP,
+		"EC-HTTP-IMP", 1)
+
+
 #ifdef DUMMY_ENUM
 	/* dummy-definition for lsp-supported editors */
 		DUMMY_END

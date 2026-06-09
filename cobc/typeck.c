@@ -129,6 +129,9 @@ static int			warn_xml_done = 0;
 #if	!defined (WITH_CJSON) && !defined (WITH_JSON_C)
 static int			warn_json_done = 0;
 #endif
+#if	!defined (WITH_CURL)
+static int			warn_curl_done = 0;
+#endif
 #ifndef WITH_EXTENDED_SCREENIO
 static int			warn_screen_done = 0;
 #endif
@@ -15661,4 +15664,18 @@ cb_emit_json_generate (cb_tree out, cb_tree from, cb_tree count,
 	}
 	cb_emit (CB_BUILD_FUNCALL_4 ("cob_json_generate_new", out, CB_TREE (tree),
 				     count, cb_int (decimal_point)));
+}
+
+void
+cb_emit_http_get (cb_tree url, cb_tree response_body, cb_tree status_code)
+{
+#if !defined (WITH_CURL)
+	if (!warn_curl_done) {
+		warn_curl_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support %s"), "HTTP");
+	}
+#endif
+	cb_emit (CB_BUILD_FUNCALL_3 ("cob_http_get", url, response_body,
+				     status_code));
 }

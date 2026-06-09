@@ -1170,6 +1170,9 @@ get_handler_type_from_statement (struct cb_statement *statement)
 	 || statement->statement == STMT_JSON_PARSE) {
 		return JSON_HANDLER;
 	}
+	if (statement->statement == STMT_HTTP_GET) {
+		return HTTP_HANDLER;
+	}
 #if 0 /* not merged yet */
 	if (statement->statement == STMT_DELETE_FILE) {
 		return DELETE_FILE_HANDLER;
@@ -2956,6 +2959,7 @@ set_record_size (cb_tree min, cb_tree max)
 %token HOT_TRACK		"HOT-TRACK"
 %token HSCROLL
 %token HSCROLL_POS		"HSCROLL-POS"
+%token HTTP_GET		"HTTP-GET"
 %token ICON
 %token ID
 %token IDENTIFIED
@@ -3562,6 +3566,7 @@ set_record_size (cb_tree min, cb_tree max)
 %nonassoc INITIATE
 %nonassoc INQUIRE
 %nonassoc INSPECT
+%nonassoc HTTP_GET
 %nonassoc JSON
 %nonassoc MERGE
 %nonassoc MODIFY
@@ -11818,6 +11823,7 @@ statement:
 | write_statement
 | xml_generate_statement
 | xml_parse_statement
+| http_get_statement
 | %prec SHIFT_PREFER
   NEXT { check_non_area_a ($1); }
   SENTENCE
@@ -18166,6 +18172,21 @@ xml_parse_body:
   _common_exception_phrases
   {
 	cb_emit_xml_parse ($1, $8, $3 == cb_true, $2, $4);
+  }
+;
+
+/* HTTP-GET */
+
+http_get_statement:
+  HTTP_GET
+  {
+	check_non_area_a ($1);
+	begin_statement (STMT_HTTP_GET, TERM_NONE);
+  }
+  identifier GIVING identifier STATUS identifier
+  _common_exception_phrases
+  {
+	cb_emit_http_get ($3, $5, $7);
   }
 ;
 
