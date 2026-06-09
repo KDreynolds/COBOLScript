@@ -15679,3 +15679,20 @@ cb_emit_http_get (cb_tree url, cb_tree response_body, cb_tree status_code)
 	cb_emit (CB_BUILD_FUNCALL_3 ("cob_http_get", url, response_body,
 				     status_code));
 }
+
+void
+cb_emit_http_post (cb_tree url, cb_tree request_body,
+		    cb_tree header_count, cb_tree header_entries,
+		    cb_tree response_body, cb_tree status_code)
+{
+#if !defined (WITH_CURL)
+	if (!warn_curl_done) {
+		warn_curl_done = 1;
+		cb_warning (cb_warn_unsupported,
+			_("runtime is not configured to support %s"), "HTTP");
+	}
+#endif
+	cb_emit (CB_BUILD_FUNCALL_6 ("cob_http_post", url, request_body,
+				     header_count, header_entries,
+				     response_body, status_code));
+}

@@ -1173,6 +1173,9 @@ get_handler_type_from_statement (struct cb_statement *statement)
 	if (statement->statement == STMT_HTTP_GET) {
 		return HTTP_HANDLER;
 	}
+	if (statement->statement == STMT_HTTP_POST) {
+		return HTTP_POST_HANDLER;
+	}
 #if 0 /* not merged yet */
 	if (statement->statement == STMT_DELETE_FILE) {
 		return DELETE_FILE_HANDLER;
@@ -2946,6 +2949,7 @@ set_record_size (cb_tree min, cb_tree max)
 %token GROUP_VALUE		"GROUP-VALUE"
 %token HANDLE
 %token HAS_CHILDREN		"HAS-CHILDREN"
+%token HEADERS
 %token HEADING
 %token HEADING_COLOR			"HEADING-COLOR"
 %token HEADING_DIVIDER_COLOR	"HEADING-DIVIDER-COLOR"
@@ -2960,6 +2964,7 @@ set_record_size (cb_tree min, cb_tree max)
 %token HSCROLL
 %token HSCROLL_POS		"HSCROLL-POS"
 %token HTTP_GET		"HTTP-GET"
+%token HTTP_POST		"HTTP-POST"
 %token ICON
 %token ID
 %token IDENTIFIED
@@ -3315,6 +3320,7 @@ set_record_size (cb_tree min, cb_tree max)
 %token SELF_ACT			"SELF-ACT"
 %token SEMI_COLON		"semi-colon"
 %token SEND
+%token SENDING
 %token SENTENCE
 %token SEPARATE
 %token SEPARATION
@@ -3567,6 +3573,7 @@ set_record_size (cb_tree min, cb_tree max)
 %nonassoc INQUIRE
 %nonassoc INSPECT
 %nonassoc HTTP_GET
+%nonassoc HTTP_POST
 %nonassoc JSON
 %nonassoc MERGE
 %nonassoc MODIFY
@@ -11824,6 +11831,7 @@ statement:
 | xml_generate_statement
 | xml_parse_statement
 | http_get_statement
+| http_post_statement
 | %prec SHIFT_PREFER
   NEXT { check_non_area_a ($1); }
   SENTENCE
@@ -18171,7 +18179,39 @@ xml_parse_body:
   }
   _common_exception_phrases
   {
-	cb_emit_xml_parse ($1, $8, $3 == cb_true, $2, $4);
+	cb_emit_http_get ($3, $5, $7);
+  }
+;
+
+/* HTTP-POST */
+
+http_post_statement:
+  HTTP_POST
+  {
+	check_non_area_a ($1);
+	begin_statement (STMT_HTTP_POST, TERM_NONE);
+  }
+  identifier SENDING identifier
+  http_post_headers
+  GIVING identifier STATUS identifier
+  _common_exception_phrases
+  {
+	cb_tree hdrs = $6;
+	cb_emit_http_post ($3, $5,
+			   hdrs ? CB_PAIR_X (hdrs) : NULL,
+			   hdrs ? CB_PAIR_Y (hdrs) : NULL,
+			   $8, $10);
+  }
+;
+
+http_post_headers:
+  /* empty */
+  {
+	$$ = NULL;
+  }
+| HEADERS identifier identifier
+  {
+	$$ = CB_BUILD_PAIR ($2, $3);
   }
 ;
 

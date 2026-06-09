@@ -2729,6 +2729,8 @@ COB_EXPIMP int	cob_xml_parse	(cob_field *, cob_field *,
 					 cob_field *, const int, void **);
 
 COB_EXPIMP void	cob_http_get	(cob_field *, cob_field *, cob_field *);
+COB_EXPIMP void	cob_http_post	(cob_field *, cob_field *, cob_field *,
+				 cob_field *, cob_field *, cob_field *);
 
 
 /****************************/

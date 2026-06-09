@@ -1490,6 +1490,9 @@ static struct cobc_reserved default_reserved_words[] = {
   { "HAS-CHILDREN",		0, 1, HAS_CHILDREN,		/* ACU extension */
 				0, CB_CS_GRAPHICAL_CONTROL | CB_CS_INQUIRE_MODIFY
   },
+  { "HEADERS",			0, 1, HEADERS,			/* GC extension */
+				0, 0
+  },
   { "HEADING",			0, 0, HEADING,			/* 2002 */
 				0, 0
   },
@@ -1533,6 +1536,9 @@ static struct cobc_reserved default_reserved_words[] = {
 				0, CB_CS_GRAPHICAL_CONTROL | CB_CS_INQUIRE_MODIFY
   },
   { "HTTP-GET",			1, 0, HTTP_GET,		/* GC extension */
+				0, 0
+  },
+  { "HTTP-POST",			1, 0, HTTP_POST,		/* GC extension */
 				0, 0
   },
   { "I-O",			0, 0, I_O,			/* 2002 */
@@ -2603,6 +2609,9 @@ static struct cobc_reserved default_reserved_words[] = {
 				0, CB_CS_GRAPHICAL_CONTROL | CB_CS_INQUIRE_MODIFY
   },
   { "SEND",			0, 0, SEND,			/* Communication Section, 2023 MCS */
+				0, 0
+  },
+  { "SENDING",			0, 1, SENDING,			/* GC extension */
 				0, 0
   },
   { "SENTENCE",			0, 0, SENTENCE,			/* 2002 */
